@@ -1646,7 +1646,9 @@ static int set_max_internal_buffers_size(struct msm_vidc_inst *inst)
 	frame_sz.height =
 		(inst->capability.mbs_per_frame.max * 256) /
 		inst->capability.width.max;
-
+#ifdef CONFIG_MACH_XIAOMI_LAVENDER
+	msm_comm_try_set_prop(inst, HAL_PARAM_FRAME_SIZE, &frame_sz);
+#endif
 	dprintk(VIDC_DBG,
 		"Max buffer reqs, buffer type = %d width = %d, height = %d, max_mbs_per_frame = %d\n",
 		frame_sz.buffer_type, frame_sz.width,
@@ -1678,11 +1680,16 @@ static int set_max_internal_buffers_size(struct msm_vidc_inst *inst)
 				__func__, rc);
 			goto alloc_fail;
 		}
+#ifdef CONFIG_MACH_XIAOMI_LAVENDER
+	frame_sz.buffer_type = HAL_BUFFER_OUTPUT2;
+	msm_comm_try_set_prop(inst, HAL_PARAM_FRAME_SIZE, &frame_sz);
+#endif
 	}
-
+#ifndef CONFIG_MACH_XIAOMI_LAVENDER
 	msm_comm_try_set_prop(inst, HAL_PARAM_FRAME_SIZE, &frame_sz);
 	frame_sz.buffer_type = HAL_BUFFER_OUTPUT2;
 	msm_comm_try_set_prop(inst, HAL_PARAM_FRAME_SIZE, &frame_sz);
+#endif
 	rc = msm_comm_try_get_bufreqs(inst);
 	if (rc) {
 		dprintk(VIDC_ERR,
@@ -1731,6 +1738,12 @@ static int set_max_internal_buffers_size(struct msm_vidc_inst *inst)
 				output_count_actual, rc);
 			goto alloc_fail;
 		}
+#ifdef CONFIG_MACH_XIAOMI_LAVENDER
+	frame_sz.buffer_type = HAL_BUFFER_OUTPUT;
+	frame_sz.width = inst->prop.width[CAPTURE_PORT];
+	frame_sz.height = inst->prop.height[CAPTURE_PORT];
+	msm_comm_try_set_prop(inst, HAL_PARAM_FRAME_SIZE, &frame_sz);
+#endif
 	}
 
 	frame_sz.buffer_type = HAL_BUFFER_INPUT;
