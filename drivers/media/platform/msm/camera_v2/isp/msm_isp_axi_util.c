@@ -563,9 +563,13 @@ static void msm_isp_cfg_framedrop_reg(
 	if (!runtime_init_frame_drop)
 		framedrop_period = stream_info->current_framedrop_period;
 
-	if (MSM_VFE_STREAM_STOP_PERIOD != framedrop_period)
+	if (MSM_VFE_STREAM_STOP_PERIOD != framedrop_period) {
 		framedrop_pattern = 0x1;
-
+#ifdef CONFIG_MACH_XIAOMI_LAVENDER
+		if(framedrop_period > 1)
+		framedrop_pattern = framedrop_pattern << (framedrop_period-1);
+#endif
+	}
 	BUG_ON(0 == framedrop_period);
 	for (i = 0; i < stream_info->num_isp; i++) {
 		vfe_dev = stream_info->vfe_dev[i];
