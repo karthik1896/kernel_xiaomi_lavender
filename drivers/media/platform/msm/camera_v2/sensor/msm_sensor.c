@@ -258,13 +258,13 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 		return -EINVAL;
 	}
 
-	if (s_ctrl->sensordata->vendor_id_info->eeprom_slave_addr == 0) {
+	if (s_ctrl->sensordata->vendor_id_info.eeprom_slave_addr == 0) {
 	pr_err("%s: %s: read 3\n", __func__, sensor_name);
 		return rc;
 	}
 
 	temp_master = sensor_i2c_client->cci_client->cci_i2c_master;
-	switch (s_ctrl->sensordata->vendor_id_info->cci_i2c_master) {
+	switch (s_ctrl->sensordata->vendor_id_info.cci_i2c_master) {
 	case MSM_MASTER_0:
 		sensor_i2c_client->cci_client->cci_i2c_master = MASTER_0;
 		break;
@@ -277,22 +277,22 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 	temp_sid = sensor_i2c_client->cci_client->sid;
 
 	sensor_i2c_client->cci_client->sid =
-		s_ctrl->sensordata->vendor_id_info->eeprom_slave_addr >> 1;
+		s_ctrl->sensordata->vendor_id_info.eeprom_slave_addr >> 1;
 
 
 	rc = msm_camera_cci_i2c_read(
 		sensor_i2c_client,
-		s_ctrl->sensordata->vendor_id_info->vendor_id_addr,
+		s_ctrl->sensordata->vendor_id_info.vendor_id_addr,
 		&vendorid,
-		s_ctrl->sensordata->vendor_id_info->data_type);
+		s_ctrl->sensordata->vendor_id_info.data_type);
 
-	if (s_ctrl->sensordata->vcm_id_info->vcm_id_addr != 0) 
+	if (s_ctrl->sensordata->vcm_id_info.vcm_id_addr != 0) 
 	{
 	    msm_camera_cci_i2c_read(
 		sensor_i2c_client,
-		s_ctrl->sensordata->vcm_id_info->vcm_id_addr,
+		s_ctrl->sensordata->vcm_id_info.vcm_id_addr,
 		&vcmid,
-		s_ctrl->sensordata->vcm_id_info->data_type);
+		s_ctrl->sensordata->vcm_id_info.data_type);
 		have_vcmid = 1;
 	}
 
@@ -302,9 +302,9 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 		pr_err("%s: %s: read vendor id failed\n", __func__, sensor_name);
 		return rc;
 	}
-	if (s_ctrl->sensordata->vendor_id_info->vendor_id != vendorid) {
+	if (s_ctrl->sensordata->vendor_id_info.vendor_id != vendorid) {
 		pr_err("%s:match vendor if failed read vendor id: 0x%x expected id 0x%x:\n",
-			__func__, vendorid, s_ctrl->sensordata->vendor_id_info->vendor_id);
+			__func__, vendorid, s_ctrl->sensordata->vendor_id_info.vendor_id);
 		rc = -1;
 		return rc;
 	}
@@ -312,26 +312,25 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 	{
 		if(have_vcmid == 1)
 		{
-			if (s_ctrl->sensordata->vcm_id_info->vcm_id != vcmid)
+			if (s_ctrl->sensordata->vcm_id_info.vcm_id != vcmid)
 			{
 				pr_err("%s:match vcmid if failed read vcm id: 0x%x expected id 0x%x:\n",
-				__func__, vcmid, s_ctrl->sensordata->vcm_id_info->vcm_id);
+				__func__, vcmid, s_ctrl->sensordata->vcm_id_info.vcm_id);
 				rc = -1;
 				return rc;
 			}
 			else
 			{
 				pr_err("%s: read vcmid id: 0x%x expected id 0x%x:\n",
-				__func__, vcmid, s_ctrl->sensordata->vcm_id_info->vcm_id);
+				__func__, vcmid, s_ctrl->sensordata->vcm_id_info.vcm_id);
 			}
 		}
 	}
 	pr_err("%s: read vendor id: 0x%x expected id 0x%x:\n",
-			__func__, vendorid, s_ctrl->sensordata->vendor_id_info->vendor_id);
+			__func__, vendorid, s_ctrl->sensordata->vendor_id_info.vendor_id);
 
 	return rc;
 }
-
 #endif
 
 static uint16_t msm_sensor_id_by_mask(struct msm_sensor_ctrl_t *s_ctrl,
