@@ -1,7 +1,7 @@
 /*
  * TEE driver for goodix fingerprint sensor
  * Copyright (C) 2016 Goodix
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +14,6 @@
  * GNU General Public License for more details.
  */
 #define pr_fmt(fmt)		KBUILD_MODNAME ": " fmt
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/ioctl.h>
@@ -41,8 +40,8 @@
 #include <linux/fb.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
-#include <linux/wakelock.h>
 #include <linux/mdss_io_util.h>
+#include <linux/wakelock.h>
 #include "gf_spi.h"
 
 #if defined(USE_SPI_BUS)
@@ -62,11 +61,10 @@
 
 #define WAKELOCK_HOLD_TIME 2000 /* in ms */
 #define FP_UNLOCK_REJECTION_TIMEOUT (WAKELOCK_HOLD_TIME - 500)
-
 #define GF_SPIDEV_NAME     "goodix,fingerprint"
 /*device name after register in charater*/
 #define GF_DEV_NAME            "goodix_fp"
-#define	GF_INPUT_NAME	    "uinput-goodix"	/*"goodix_fp" */
+#define	GF_INPUT_NAME	    "uinput-goodix"/*"goodix_fp" */
 
 #define	CHRD_DRIVER_NAME	"goodix_fp_spi"
 #define	CLASS_NAME		    "goodix_fp"
@@ -80,6 +78,7 @@ static DEFINE_MUTEX(device_list_lock);
 static struct wake_lock fp_wakelock;
 static struct gf_dev gf;
 
+#if 0
 static struct gf_key_map maps[] = {
 	{ EV_KEY, GF_KEY_INPUT_HOME },
 	{ EV_KEY, GF_KEY_INPUT_MENU },
@@ -96,6 +95,23 @@ static struct gf_key_map maps[] = {
 	{ EV_KEY, GF_NAV_INPUT_LONG_PRESS },
 	{ EV_KEY, GF_NAV_INPUT_HEAVY },
 #endif
+};
+#endif
+struct gf_key_map maps[] = {
+        { EV_KEY, KEY_HOME },
+        { EV_KEY, KEY_MENU },
+        { EV_KEY, KEY_BACK },
+        { EV_KEY, KEY_POWER },
+        { EV_KEY, KEY_UP },
+        { EV_KEY, KEY_DOWN },
+        { EV_KEY, KEY_RIGHT },
+        { EV_KEY, KEY_LEFT },
+        { EV_KEY, KEY_CAMERA },
+        { EV_KEY, KEY_F9 },
+        { EV_KEY, KEY_F19 },
+        { EV_KEY, KEY_ENTER},
+        { EV_KEY, KEY_KPENTER },
+
 };
 
 static void gf_enable_irq(struct gf_dev *gf_dev)
@@ -375,13 +391,9 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 	uint32_t key_input = 0;
 
 	if (gf_key->key == GF_KEY_HOME) {
-#ifdef CONFIG_TOUCHSCREEN_COMMON
-		if (!capacitive_keys_enabled)
-			return;
-#endif
-		key_input = GF_KEY_INPUT_HOME;
+		key_input = KEY_HOME;
 	} else if (gf_key->key == GF_KEY_POWER) {
-		key_input = GF_KEY_INPUT_POWER;
+		key_input = KEY_POWER;
 	} else if (gf_key->key == GF_KEY_CAMERA) {
 		key_input = GF_KEY_INPUT_CAMERA;
 	} else {
@@ -516,6 +528,8 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case GF_IOC_REMOVE:
 		pr_debug("%s GF_IOC_REMOVE\n", __func__);
+		//irq_cleanup(gf_dev);
+		//gf_cleanup(gf_dev);
 		break;
 
 	case GF_IOC_CHIP_INFO:
@@ -546,9 +560,9 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
  static void notification_work(struct work_struct *work)
 {
-	pr_debug("notification_work\n");
+	printk("notification_work\n");
 	mdss_prim_panel_fb_unblank(FP_UNLOCK_REJECTION_TIMEOUT);
-	pr_debug("unblank\n");
+	printk("unblank\n");
 }
 
 static int gf_open(struct inode *inode, struct file *filp)
@@ -621,9 +635,11 @@ static int gf_release(struct inode *inode, struct file *filp)
 	/*last close?? */
 	gf_dev->users--;
 	if (!gf_dev->users) {
+
+		pr_info("disble_irq. irq = %d\n", gf_dev->irq);
+		//gf_disable_irq(gf_dev);
 		irq_cleanup(gf_dev);
 		gf_cleanup(gf_dev);
-
 		/*power off the sensor*/
 		gf_dev->device_available = 0;
 		gf_power_off(gf_dev);
@@ -659,7 +675,8 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 
 	if (val != FB_EVENT_BLANK)
 		return 0;
-
+	pr_info("[info] %s go to the goodix_fb_state_chg_callback value = %d\n",
+			__func__, (int)val);
 	gf_dev = container_of(nb, struct gf_dev, notifier);
 	if (evdata && evdata->data && val == FB_EVENT_BLANK && gf_dev) {
 		blank = *(int *)(evdata->data);
@@ -714,8 +731,9 @@ static int gf_probe(struct platform_device *pdev)
 	int i;
 #if defined CONFIG_MACH_XIAOMI_LAVENDER || defined CONFIG_MACH_XIAOMI_WAYNE
 	struct regulator *vreg;
+	int ret=0;
 #endif
-
+        printk("Macle11 gf_probe\n");
 	/* Initialize the driver data */
 	INIT_LIST_HEAD(&gf_dev->device_entry);
 #if defined(USE_SPI_BUS)
@@ -730,26 +748,32 @@ static int gf_probe(struct platform_device *pdev)
 	gf_dev->fb_black = 0;
 	gf_dev->wait_finger_down = false;
 	INIT_WORK(&gf_dev->work, notification_work);
-
 #if defined CONFIG_MACH_XIAOMI_LAVENDER || defined CONFIG_MACH_XIAOMI_WAYNE
 	vreg = regulator_get(&gf_dev->spi->dev,"vcc_ana");
-	if (!vreg) {
-		dev_err(&gf_dev->spi->dev, "Unable to get vdd_ana\n");
-		goto error_hw;
-	}
+		if (!vreg) {                                    
+			dev_err(&gf_dev->spi->dev, "Unable to get vdd_ana\n");
+			goto error_hw;
+		}
 
-	status = regulator_enable(vreg);
-	if (status) {
-		dev_err(&gf_dev->spi->dev, "error enabling vdd_ana %d\n", status);
-		regulator_put(vreg);
-		vreg = NULL;
-		goto error_hw;
-	}
-	pr_info("Macle Set voltage on vdd_ana for goodix fingerprint");
-
+		/*if (regulator_count_voltages(vreg) > 0) {
+			ret = regulator_set_voltage(vreg, 3300000,3300000);
+			if (ret){
+				dev_err(&gf_dev->spi->dev,"Unable to set voltage on vdd_ana");
+				goto error_hw;
+			}
+		}
+		*/
+		ret = regulator_enable(vreg);
+		if (ret) {
+			dev_err(&gf_dev->spi->dev, "error enabling vdd_ana %d\n",ret);
+			regulator_put(vreg);
+			vreg = NULL;
+			goto error_hw;
+		}
+		pr_info("Macle Set voltage on vdd_ana for goodix fingerprint");
+//	}
 	msleep(11);
-#endif
-
+        #endif
 	/* If we can allocate a minor number, hook up this device.
 	 * Reusing minors is fine so long as udev or mdev is working.
 	 */
@@ -769,6 +793,7 @@ static int gf_probe(struct platform_device *pdev)
 		goto error_hw;
 	}
 
+      
 	if (status == 0) {
 		set_bit(minor, minors);
 		list_add(&gf_dev->device_entry, &device_list);
@@ -778,6 +803,7 @@ static int gf_probe(struct platform_device *pdev)
 	}
 	mutex_unlock(&device_list_lock);
 
+  
 	gf_dev->input = input_allocate_device();
 	if (gf_dev->input == NULL) {
 		pr_err("%s, failed to allocate input device\n", __func__);
@@ -793,6 +819,7 @@ static int gf_probe(struct platform_device *pdev)
 		pr_err("failed to register input device\n");
 		goto error_input;
 	}
+
 
 #ifdef AP_CONTROL_CLK
 	pr_info("Get the clk resource.\n");
@@ -811,6 +838,7 @@ static int gf_probe(struct platform_device *pdev)
 
 	wake_lock_init(&fp_wakelock, WAKE_LOCK_SUSPEND, "fp_wakelock");
 
+        printk("adasdad\n");
 	pr_info("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
 
 	return status;

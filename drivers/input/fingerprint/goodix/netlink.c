@@ -2,6 +2,7 @@
  * netlink interface
  *
  * Copyright (c) 2017 Goodix
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -18,37 +19,31 @@
 static int pid = -1;
 static struct sock *nl_sk;
 
-int sendnlmsg(char *msg)
+void sendnlmsg(char *msg)
 {
-	struct sk_buff *skb;
+	struct sk_buff *skb_1;
 	struct nlmsghdr *nlh;
 	int len = NLMSG_SPACE(MAX_MSGSIZE);
 	int ret = 0;
 
 	if (!msg || !nl_sk || !pid)
-		return -ENODEV;
+		return;
 
-	skb = alloc_skb(len, GFP_ATOMIC);
-	if (!skb)
-		return -ENOMEM;
+	skb_1 = alloc_skb(len, GFP_KERNEL);
+	if (!skb_1)
+		return;
 
-	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0);
-	if (!nlh) {
-		kfree_skb(skb);
-		return -EMSGSIZE;
-	}
+	nlh = nlmsg_put(skb_1, 0, 0, 0, MAX_MSGSIZE, 0);
 
-	NETLINK_CB(skb).portid = 0;
-	NETLINK_CB(skb).dst_group = 0;
+	NETLINK_CB(skb_1).portid = 0;
+	NETLINK_CB(skb_1).dst_group = 0;
 
 	memcpy(NLMSG_DATA(nlh), msg, sizeof(char));
 	pr_debug("send message: %d\n", *(char *)NLMSG_DATA(nlh));
 
-	ret = netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
-	if (ret > 0)
-		ret = 0;
-
-	return ret;
+	ret = netlink_unicast(nl_sk, skb_1, pid, MSG_DONTWAIT);
+	if (ret)
+		pr_err("failed to send msg error:0x%x\n", ret);
 }
 
 static void nl_data_ready(struct sk_buff *__skb)
