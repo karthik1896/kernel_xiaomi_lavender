@@ -1360,15 +1360,12 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 	}
 
 #ifdef CONFIG_MACH_LONGCHEER
-	if (!strcmp("led:switch_0", led_cdev->name) && !value)
-		if (led->flashlight_node != NULL)
+		if(!strcmp("led:switch_0",led_cdev->name) && !value)
+		if(NULL != led->flashlight_node)
 			led->flashlight_node->cdev.brightness = value;
-#endif
-
 	spin_unlock(&led->lock);
 }
 
-#ifdef CONFIG_MACH_LONGCHEER
 static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 						enum led_brightness value)
 {
@@ -1376,11 +1373,6 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 	struct qpnp_flash_led *led = NULL;
 	int rc;
 	int i, j;
-
-#ifdef CONFIG_MACH_XIAOMI_LAVENDER
-	if (100 == value)
-		value = 70;
-#endif
 
 	if (!strcmp("flashlight", led_cdev->name)) {
 		flashlight_data = container_of(led_cdev, struct flashlight_node_data, cdev);
@@ -1397,10 +1389,10 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		for(i = 0; i < flashlight_data->num_switch; ++i)
 			for(j = 0; j < led->num_snodes; ++j) {
 				pr_debug(" switch name[%d] = %s, snode name[%d] = %s\n",i, flashlight_data->switch_name[i],j, led->snode[j].cdev.name);
-				if (!strcmp(flashlight_data->switch_name[i], led->snode[j].cdev.name)) {
+				if(!strcmp(flashlight_data->switch_name[i], led->snode[j].cdev.name)) {
 					rc = qpnp_flash_led_switch_set(&led->snode[j], false);
-					if (rc < 0)
-						pr_err("Failed to set flash LED switch rc=%d\n", rc);
+				if (rc < 0)
+					pr_err("Failed to set flash LED switch rc=%d\n", rc);
 					break;
 				}
 			}
@@ -1408,7 +1400,7 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		for(i = 0; i < flashlight_data->num_torch; ++i)
 			for(j = 0; j < led->num_fnodes; ++j) {
 				pr_debug(" torch name[%d] = %s, fnode name[%d] = %s\n",i, flashlight_data->torch_name[i],j, led->fnode[j].cdev.name);
-				if (!strcmp(flashlight_data->torch_name[i], led->fnode[j].cdev.name)) {
+				if(!strcmp(flashlight_data->torch_name[i], led->fnode[j].cdev.name)) {
 					qpnp_flash_led_node_set(&led->fnode[j], value);
 					break;
 				}
@@ -1417,17 +1409,18 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		for(i = 0; i < flashlight_data->num_switch; ++i)
 			for(j = 0; j < led->num_snodes; ++j) {
 				pr_debug(" switch name[%d] = %s, snode name[%d] = %s\n",i, flashlight_data->switch_name[i],j, led->snode[j].cdev.name);
-				if (!strcmp(flashlight_data->switch_name[i], led->snode[j].cdev.name)) {
+				if(!strcmp(flashlight_data->switch_name[i], led->snode[j].cdev.name)) {
 					rc = qpnp_flash_led_switch_set(&led->snode[j], value > 0);
-					if (rc < 0)
-						pr_err("Failed to set flash LED switch rc=%d\n", rc);
+				if (rc < 0)
+					pr_err("Failed to set flash LED switch rc=%d\n", rc);
 					break;
 				}
 			}
 	}
+#endif
 	spin_unlock(&led->lock);
 }
-#endif
+
 
 /* sysfs show function for flash_max_current */
 static ssize_t qpnp_flash_led_max_current_show(struct device *dev,
@@ -1747,8 +1740,10 @@ static int qpnp_flash_led_parse_each_led_dt(struct qpnp_flash_led *led,
 				active_high;
 
 #ifdef CONFIG_MACH_XIAOMI_LAVENDER
-	if (fnode->type == FLASH_LED_TYPE_TORCH)
+	if(fnode->type == FLASH_LED_TYPE_TORCH)
+	{
 		fnode->cdev.flags |= LED_KEEP_TRIGGER;
+	}
 #endif
 
 	rc = led_classdev_register(&led->pdev->dev, &fnode->cdev);
