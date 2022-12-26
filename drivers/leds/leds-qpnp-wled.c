@@ -1530,6 +1530,10 @@ static irqreturn_t qpnp_wled_ovp_irq_handler(int irq, void *_wled)
 			int_sts, fault_sts);
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_LAVENDER
+	printk("%s, %d auto_calib_enabled = %d", __FILE__, __LINE__, wled->auto_calib_enabled?1:0);
+#endif
+
 	if (fault_sts & QPNP_WLED_OVP_FAULT_BIT) {
 		if (wled->auto_calib_enabled && !wled->auto_calib_done) {
 			if (qpnp_wled_auto_cal_required(wled)) {

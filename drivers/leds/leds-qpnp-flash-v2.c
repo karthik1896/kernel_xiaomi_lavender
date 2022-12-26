@@ -1360,7 +1360,7 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 	}
 
 #ifdef CONFIG_MACH_LONGCHEER
-		if(!strcmp("led:switch_0",led_cdev->name) && !value)
+	if(!strcmp("led:switch_0",led_cdev->name) && !value)
 		if(NULL != led->flashlight_node)
 			led->flashlight_node->cdev.brightness = value;
 	spin_unlock(&led->lock);
@@ -1823,7 +1823,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 	pr_debug("%s qcom,torch-name count %d\n", __func__, flashlight_node->num_torch);
 
 	temp_name = kzalloc(sizeof(char *) * count, GFP_KERNEL);
-	if (temp_name) {
+	if(temp_name) {
 		for(i = 0; i < count; ++i) {
 			flashlight_node->torch_name = temp_name;
 			temp_name[i] = kzalloc(sizeof(char) * NAME_SIZE,GFP_KERNEL);
@@ -1831,7 +1831,8 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 			pr_debug("%s torch_name[%d] = %s\n", __func__, i,flashlight_node->torch_name[i]);
 		}
 	} else
-		pr_err("%s alloc torch_name failed!!!\n",__func__);
+		pr_err("%s alloc torch_name faild!!!\n",__func__);
+
 
 	count = of_property_count_strings(node, "qcom,switch-name");
 	if (!count || (count == -EINVAL)) {
@@ -1843,7 +1844,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 	pr_debug("%s qcom,switch-name count %d\n", __func__, count);
 
 	temp_name = kzalloc(sizeof(char *) * count, GFP_KERNEL);
-	if (temp_name) {
+	if(temp_name) {
 		for(i = 0; i < count; ++i) {
 			flashlight_node->switch_name = temp_name;
 			temp_name[i] = kzalloc(sizeof(char) * NAME_SIZE,GFP_KERNEL);
@@ -2466,7 +2467,7 @@ static int qpnp_flash_led_probe(struct platform_device *pdev)
 #ifdef CONFIG_MACH_LONGCHEER
 	led->flashlight_node = devm_kcalloc(&pdev->dev, led->num_flashlight_nodes,
 				sizeof(*led->flashlight_node),
-				GFP_KERNEL);
+			GFP_KERNEL);
 	if (!led->flashlight_node)
 		return -ENOMEM;
 #endif
